@@ -2,12 +2,18 @@
 # talks to Supabase when someone visits, so this pings it every 3 days with one
 # tiny read. It reads the URL and the public (publishable) key from config.js,
 # so it keeps working if the project ever changes.
+# GitHub also switches off scheduled workflows after 60 days without repo
+# activity; the last step re-enables this one on every run so that never happens.
 name: Supabase keep-alive
 
 on:
   schedule:
     - cron: "17 9 */3 * *"   # 09:17 UTC every 3rd day
   workflow_dispatch:          # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   ping:
@@ -27,3 +33,8 @@ jobs:
             -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
           echo "Supabase answered HTTP $code"
           test "$code" = "200"
+
+      - name: Keep this schedule switched on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/supabase-keepalive.yml/enable"
